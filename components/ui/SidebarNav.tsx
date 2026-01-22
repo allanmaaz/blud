@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sparkles, User, Settings, LogOut, Newspaper } from "lucide-react";
+import { Home, Sparkles, Settings, Newspaper } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTime } from "@/components/providers/TimeProvider";
 import { useSound } from "@/components/providers/SoundProvider";
@@ -20,7 +20,6 @@ export default function SidebarNav() {
         { href: "/", label: "Common Room", icon: Home },
         { href: "/rituals", label: "Weekly Rituals", icon: Sparkles },
         { href: "/classifieds", label: "Classifieds", icon: Newspaper },
-        { href: "/profile", label: "Your Profile", icon: User },
     ];
 
     return (
@@ -80,14 +79,6 @@ export default function SidebarNav() {
                 >
                     <Settings size={20} />
                     <span className="text-base font-medium" suppressHydrationWarning>{isNight ? "Day Mode" : "Night Mode"}</span>
-                </button>
-                <button
-                    onMouseEnter={() => playHover()}
-                    onClick={() => playClick()}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-blud-blue/40 hover:bg-blud-blue/5 hover:text-red-500 transition-colors w-full text-left"
-                >
-                    <LogOut size={20} />
-                    <span className="text-base font-medium">Log out</span>
                 </button>
             </div>
         </div>

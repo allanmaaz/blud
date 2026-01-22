@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sparkles, User, Newspaper } from "lucide-react";
+import { Home, Sparkles, Newspaper } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useSound } from "@/components/providers/SoundProvider";
@@ -15,7 +15,6 @@ export default function BottomNav() {
         { href: "/", label: "Home", icon: Home },
         { href: "/classifieds", label: "Classifieds", icon: Newspaper },
         { href: "/rituals", label: "Rituals", icon: Sparkles },
-        { href: "/profile", label: "Profile", icon: User },
     ];
 
     return (
