@@ -48,12 +48,16 @@ public class OpenAIService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
         try {
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+            @SuppressWarnings("unchecked")
             Map<String, Object> responseBody = response.getBody();
             if (responseBody != null) {
+                @SuppressWarnings("unchecked")
                 List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
                 if (choices != null && !choices.isEmpty()) {
                     Map<String, Object> firstChoice = choices.get(0);
+                    @SuppressWarnings("unchecked")
                     Map<String, String> msg = (Map<String, String>) firstChoice.get("message");
                     return msg.get("content").trim();
                 }

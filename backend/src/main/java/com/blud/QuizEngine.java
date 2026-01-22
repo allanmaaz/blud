@@ -4,12 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import com.blud.service.OpenAIService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 @Component
 public class QuizEngine {
@@ -20,7 +17,6 @@ public class QuizEngine {
         @Autowired
         private com.blud.service.OpenAIService openAIService;
 
-        private final Random random = new Random();
         private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
         @Scheduled(fixedRate = 10000)
@@ -78,19 +74,8 @@ public class QuizEngine {
         }
 
         private static class QuizTemplate {
-                String category;
-                String question;
-                List<String> options;
-                int correctAnswer;
-
-                public QuizTemplate() {
-                }
-
-                public QuizTemplate(String category, String question, List<String> options, int correctAnswer) {
-                        this.category = category;
-                        this.question = question;
-                        this.options = options;
-                        this.correctAnswer = correctAnswer;
-                }
+                public String question;
+                public List<String> options;
+                public int correctAnswer;
         }
 }
