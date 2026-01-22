@@ -1,0 +1,6 @@
+# Ignore everything except what we need
+target/
+.mvn/
+*.log
+*.class
+.DS_Store
