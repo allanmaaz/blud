@@ -1,0 +1,13 @@
+# Render.com configuration
+# This file is optional but helps document the deployment settings
+
+# Service Type: Web Service
+# Environment: Java 17
+# Build Command: ./render-build.sh
+# Start Command: java -Dserver.port=$PORT -jar target/backend-0.0.1-SNAPSHOT.jar
+# Root Directory: backend
+
+# Environment Variables to set in Render Dashboard:
+# - OPENAI_API_KEY=your_api_key_here
+# - SPRING_PROFILES_ACTIVE=prod
+# - JAVA_VERSION=17
