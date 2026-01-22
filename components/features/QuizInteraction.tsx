@@ -33,7 +33,7 @@ export default function QuizInteraction({ post }: { post: Post }) {
             try {
                 const user = JSON.parse(localStorage.getItem("user") || "{}");
                 if (user.email) {
-                    const res = await fetch("http://localhost:8080/api/stats/score", {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/stats/score`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ email: user.email, correct: true })

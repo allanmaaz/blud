@@ -16,8 +16,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -41,10 +40,6 @@ public class BludApplication {
         SpringApplication.run(BludApplication.class, args);
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 }
 
 // --- Security Configuration ---
@@ -73,29 +68,29 @@ class User {
     private Long id;
 
     private String email;
-    private String password;
+    private String name;
+    private String avatar;
+    private String provider; // "google" or "github"
 
     // Profile Data
-    private String name;
     private String handle;
     private String major;
     private String dorm;
-    private String avatar;
 
     // Constructors
     public User() {
     }
 
-    public User(Long id, String email, String password, String name, String handle, String major, String dorm,
-            String avatar) {
+    public User(Long id, String email, String name, String avatar, String provider, String handle, String major,
+            String dorm) {
         this.id = id;
         this.email = email;
-        this.password = password;
         this.name = name;
+        this.avatar = avatar;
+        this.provider = provider;
         this.handle = handle;
         this.major = major;
         this.dorm = dorm;
-        this.avatar = avatar;
     }
 
     // Getters and Setters
@@ -115,20 +110,20 @@ class User {
         this.email = email;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
     public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
     }
 
     public String getHandle() {
@@ -201,12 +196,12 @@ class User {
     public static class UserBuilder {
         private Long id;
         private String email;
-        private String password;
         private String name;
+        private String avatar;
+        private String provider;
         private String handle;
         private String major;
         private String dorm;
-        private String avatar;
 
         public UserBuilder id(Long id) {
             this.id = id;
@@ -218,13 +213,18 @@ class User {
             return this;
         }
 
-        public UserBuilder password(String password) {
-            this.password = password;
+        public UserBuilder name(String name) {
+            this.name = name;
             return this;
         }
 
-        public UserBuilder name(String name) {
-            this.name = name;
+        public UserBuilder avatar(String avatar) {
+            this.avatar = avatar;
+            return this;
+        }
+
+        public UserBuilder provider(String provider) {
+            this.provider = provider;
             return this;
         }
 
@@ -243,13 +243,8 @@ class User {
             return this;
         }
 
-        public UserBuilder avatar(String avatar) {
-            this.avatar = avatar;
-            return this;
-        }
-
         public User build() {
-            return new User(id, email, password, name, handle, major, dorm, avatar);
+            return new User(id, email, name, avatar, provider, handle, major, dorm);
         }
     }
 }
@@ -260,80 +255,65 @@ interface UserRepository extends JpaRepository<User, Long> {
 
 // --- Auth Controller ---
 
+// --- User Controller ---
+
 @RestController
-@RequestMapping("/api/auth")
-@CrossOrigin(origins = "*") // Allow frontend access
-class AuthController {
+@RequestMapping("/api/users")
+@CrossOrigin(origins = "*")
+class UserController {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserController(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            return ResponseEntity.badRequest().body("Email already taken");
-        }
-
-        User user = User.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .name(request.getName()) // Can be empty initially
-                .build();
-
-        userRepository.save(user);
-        return ResponseEntity.ok(user);
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    @PostMapping("/sync")
+    public ResponseEntity<?> syncUser(@RequestBody UserSyncRequest request) {
         Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                return ResponseEntity.ok(user);
-            }
-        }
-        return ResponseEntity.status(401).body("Invalid credentials");
-    }
-
-    @PostMapping("/update-profile")
-    public ResponseEntity<?> updateProfile(@RequestBody User updatedData) {
-        // In a real app, get ID from SecurityContext/JWT. using email for prototype
-        // simple auth
-        Optional<User> userOpt = userRepository.findByEmail(updatedData.getEmail());
         User user;
+
         if (userOpt.isPresent()) {
             user = userOpt.get();
+            // Update fields if changed
+            user.setName(request.getName());
+            user.setAvatar(request.getImage());
+            if (user.getProvider() == null) {
+                user.setProvider("oauth");
+            }
         } else {
-            // Self-healing: Create user if missing (DB reset scenario)
+            // Create new user
             user = new User();
-            user.setEmail(updatedData.getEmail());
-            user.setPassword(passwordEncoder.encode("password")); // Default password for recovered users
+            user.setEmail(request.getEmail());
+            user.setName(request.getName());
+            user.setAvatar(request.getImage());
+            user.setProvider("oauth");
+            user.setHandle(request.getName().toLowerCase().replace(" ", "_")); // Default handle
+
+            // Randomly assign a dorm for fun
+            String[] dorms = { "North Hall", "South Hall", "East Wing", "West Commons" };
+            user.setDorm(dorms[new java.util.Random().nextInt(dorms.length)]);
+
+            user.setProductivity("50");
+            user.setSuccessRate("50");
         }
 
-        user.setName(updatedData.getName());
-        user.setHandle(updatedData.getHandle());
-        user.setMajor(updatedData.getMajor());
-        user.setDorm(updatedData.getDorm());
-        user.setAvatar(updatedData.getAvatar()); // Persist Avatar
-        user.setBirthDate(updatedData.getBirthDate());
-        user.setProductivity(updatedData.getProductivity());
-        user.setSuccessRate(updatedData.getSuccessRate());
         userRepository.save(user);
         return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/{email}")
+    public ResponseEntity<?> getUser(@PathVariable String email) {
+        return userRepository.findByEmail(email)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }
 
-// DTOs
-class SignupRequest {
+class UserSyncRequest {
     private String email;
-    private String password;
     private String name;
+    private String image;
 
     public String getEmail() {
         return email;
@@ -341,14 +321,6 @@ class SignupRequest {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getName() {
@@ -358,26 +330,13 @@ class SignupRequest {
     public void setName(String name) {
         this.name = name;
     }
-}
 
-class LoginRequest {
-    private String email;
-    private String password;
-
-    public String getEmail() {
-        return email;
+    public String getImage() {
+        return image;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public void setImage(String image) {
+        this.image = image;
     }
 }
 

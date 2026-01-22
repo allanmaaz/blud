@@ -25,7 +25,7 @@ export default function OnboardingPage() {
         const updatedUser = { ...user, ...formData };
 
         try {
-            const res = await fetch("http://localhost:8080/api/auth/update-profile", {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/sync`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updatedUser)

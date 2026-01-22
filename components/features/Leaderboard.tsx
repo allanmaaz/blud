@@ -17,7 +17,7 @@ export default function Leaderboard() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await fetch("http://localhost:8080/api/stats/dorms");
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/stats/dorms`);
                 if (res.ok) {
                     const data = await res.json();
                     setStats(data);

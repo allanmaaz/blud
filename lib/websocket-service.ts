@@ -2,7 +2,7 @@ import SockJS from 'sockjs-client';
 import { Client, Message, StompSubscription } from '@stomp/stompjs';
 
 // Define configuration for the backend
-const WEBSOCKET_URL = 'http://localhost:8080/ws';
+const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/ws';
 
 class WebSocketService {
     private client: Client;

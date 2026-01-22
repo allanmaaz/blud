@@ -5,8 +5,10 @@ import { Share2, Copy, MoreHorizontal, Calendar, CreditCard, MapPin, Code, Edit2
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useSound } from "@/components/providers/SoundProvider";
+import { useSession } from "next-auth/react";
 
 export default function StudentIdCard() {
+    const { data: session } = useSession();
     const { playClick, playHover, playSwitch, playSuccess } = useSound();
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -25,36 +27,40 @@ export default function StudentIdCard() {
     });
 
     useEffect(() => {
-        const loadUser = () => {
-            const savedUser = localStorage.getItem("user");
-            if (savedUser) {
-                try {
-                    const user = JSON.parse(savedUser);
-                    setData(prev => ({
-                        ...prev,
-                        name: user.name || prev.name,
-                        handle: user.handle || prev.handle,
-                        location: user.dorm || prev.location,
-                        position: user.major || prev.position,
-                        avatar: user.avatar || prev.avatar,
-                        email: user.email || "",
-                        birth: user.birthDate || prev.birth,
-                        productivity: user.productivity || prev.productivity,
-                        success: user.successRate || prev.success,
-                        id: user.id ? `ID.${user.id}` : prev.id
-                    }));
-                } catch (e) {
-                    console.error("Failed to parse user", e);
-                }
+        // Priority 1: NextAuth Session
+        if (session?.user) {
+            setData(prev => ({
+                ...prev,
+                name: session.user.name || prev.name,
+                email: session.user.email || prev.email,
+                avatar: session.user.image || prev.avatar,
+                handle: session.user.name?.replace(/\s/g, "") || prev.handle,
+            }));
+
+            // Also fetch extended profile from backend
+            if (session.user.email) {
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${session.user.email}`)
+                    .then(res => res.json())
+                    .then(user => {
+                        if (user) {
+                            setData(prev => ({
+                                ...prev,
+                                name: user.name || prev.name,
+                                handle: user.handle || prev.handle,
+                                location: user.dorm || prev.location,
+                                position: user.major || prev.position,
+                                avatar: user.avatar || prev.avatar,
+                                birth: user.birthDate || prev.birth,
+                                productivity: user.productivity || prev.productivity,
+                                success: user.successRate || prev.success,
+                                id: user.id ? `ID.${user.id}` : prev.id
+                            }));
+                        }
+                    })
+                    .catch(e => console.error("Failed to fetch user profile", e));
             }
-        };
-
-        loadUser();
-
-        // Listen for updates from Quiz wins
-        window.addEventListener("blud-user-update", loadUser);
-        return () => window.removeEventListener("blud-user-update", loadUser);
-    }, []);
+        }
+    }, [session]);
 
     const handleSave = async () => {
         if (!data.email) {
@@ -66,34 +72,24 @@ export default function StudentIdCard() {
 
         setIsSaving(true);
         try {
-            // Persist to backend
-            const payload = {
-                email: data.email,
-                name: data.name,
-                handle: data.handle,
-                major: data.position, // Mapping frontend 'position' to backend 'major'
-                dorm: data.location,  // Mapping frontend 'location' to backend 'dorm'
-                avatar: data.avatar,
-                birthDate: data.birth,
-                productivity: data.productivity,
-                successRate: data.success
-            };
-
-            const res = await fetch("http://localhost:8080/api/auth/update-profile", {
+            // Persist to backend using Sync endpoint
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/sync`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    email: data.email,
+                    name: data.name,
+                    image: data.avatar,
+                    // Additional fields aren't in sync request yet but we can expand the backend DTO later
+                    // For now this just syncs core identity
+                })
             });
 
             if (res.ok) {
-                const updatedUser = await res.json();
-                // Update local storage to keep it in sync
-                localStorage.setItem("user", JSON.stringify({ ...updatedUser, email: data.email })); // Ensure email persists
                 playSuccess();
                 setIsEditing(false);
             } else {
                 console.error("Failed to save profile");
-                // playError() // if sound existed
             }
         } catch (error) {
             console.error("Network error", error);
